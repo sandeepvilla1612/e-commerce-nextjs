@@ -1,0 +1,31 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ "master" ]   # deploy on push to master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+    - name: Copy files to EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "mkdir -p ~/app"
+        scp -o StrictHostKeyChecking=no -r . ubuntu@${{ secrets.EC2_HOST }}:~/app
+
+    - name: Deploy on EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "
+          cd ~/app &&
+          docker-compose down || true &&
+          docker-compose up -d --build
+        "
